@@ -23,45 +23,74 @@ import {
   Activity
 } from "lucide-react";
 
-interface ValuationResult {
+// Updated interface to align with ApiValuationResult
+interface ValuationResult { // Component's interface
+  registration?: string;
+  make?: string; 
+  model?: string; 
+  year?: number; 
+  mileage?: number; 
   currentValue: {
     retail: number;
-    private: number;
+    private: number; // Map from ApiValuationResult.currentValue.privateSale
     tradeIn: number;
   };
-  depreciation: {
+  depreciation: { // Map from ApiValuationResult.depreciationForecast
     year1: number;
     year2: number;
     year3: number;
-    year4: number;
-    year5: number;
+    year4?: number;
+    year5?: number;
   };
-  marketData: {
-    demandLevel: 'Low' | 'Medium' | 'High';
-    supplyLevel: 'Low' | 'Medium' | 'High';
-    marketTrend: 'Declining' | 'Stable' | 'Rising';
-    popularityScore: number;
+  marketData: { // Map from ApiValuationResult.marketInsights
+    demandLevel: 'Low' | 'Medium' | 'High' | string; // Map from marketInsights.demand
+    supplyLevel: 'Low' | 'Medium' | 'High' | string; // Map from marketInsights.supply
+    marketTrend: 'Declining' | 'Stable' | 'Rising' | string; // Map from marketInsights.trend
+    popularityScore: number; // Map from marketInsights.popularityScore (ensure default 0 if undefined)
   };
-  factors: {
-    age: number;
-    mileage: number;
-    condition: number;
-    serviceHistory: number;
-    modifications: number;
-    accidents: number;
+  factors: { // Map from ApiValuationResult.valuationFactors
+    age: number; // Map from valuationFactors.ageImpact (ensure default 0 if undefined)
+    mileage: number; // Map from valuationFactors.mileageImpact (ensure default 0 if undefined)
+    condition: number; // Map from valuationFactors.conditionImpact (ensure default 0 if undefined)
+    serviceHistory: number; // Map from valuationFactors.serviceHistoryImpact (ensure default 0 if undefined)
+    modifications: number; // Not in ApiValuationResult, component should handle if it was previously expected. Default to 100 or remove.
+    accidents: number; // Not in ApiValuationResult, component should handle. Default to 100 or remove.
   };
-  similarVehicles: Array<{
-    make: string;
-    model: string;
-    year: number;
-    mileage: number;
+  similarVehicles: Array<{ // Map from ApiValuationResult.comparableListings
+    make?: string; // Extract from description or leave empty
+    model?: string; // Extract from description or leave empty
+    year?: number; // Extract from description or leave empty
+    mileage?: number; // Extract from description or leave empty
+    description: string; // From comparableListings.description
     price: number;
-    location: string;
+    location?: string;
+    source?: string; // From comparableListings.source
+    url?: string; // From comparableListings.url
   }>;
 }
 
+// For reference - Not used directly in the component
+// interface ApiValuationResult {
+//   registration?: string;
+//   make: string;
+//   model: string;
+//   year: number;
+//   mileage: number;
+//   currentValue: {
+//     retail: number;
+//     privateSale: number;
+//     tradeIn: number;
+//   };
+//   depreciationForecast?: { /* ... */ };
+//   marketInsights?: { /* ... */ };
+//   valuationFactors?: { /* ... */ };
+//   comparableListings?: Array<{ /* ... */ }>;
+// }
+
+
 export default function VehicleValuation() {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("lookup");
   const [registrationLookup, setRegistrationLookup] = useState("");
   const [manualInput, setManualInput] = useState({
@@ -69,72 +98,120 @@ export default function VehicleValuation() {
     model: "",
     year: new Date().getFullYear(),
     mileage: "",
-    condition: "good",
-    serviceHistory: "full",
-    modifications: "none",
-    accidents: "none"
+    condition: "good", // Will be used for client-side adjustment or display, not directly sent if API doesn't take it
+    serviceHistory: "full", // Same as condition
+    modifications: "none", // Same as condition
+    accidents: "none" // Same as condition
   });
   const [valuationResult, setValuationResult] = useState<ValuationResult | null>(null);
 
-  // Mock valuation calculation
   const calculateValuation = async (isRegistrationLookup = false) => {
     setLoading(true);
+    setError(null);
+    setValuationResult(null); // Clear previous results
 
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    let payload: any = {};
+    if (isRegistrationLookup) {
+      payload = { registration: registrationLookup };
+    } else {
+      payload = { 
+        make: manualInput.make,
+        model: manualInput.model,
+        year: manualInput.year,
+        // Ensure mileage is a number or undefined if not set
+        mileage: manualInput.mileage ? parseInt(manualInput.mileage) : undefined,
+        // The API doesn't take condition, serviceHistory etc. directly in this simulation
+        // These might be used client-side or a more complex API would handle them
+      };
+    }
 
-    // Mock data based on input
-    const baseValue = isRegistrationLookup ? 18000 : 15000;
-    const ageAdjustment = isRegistrationLookup ? 0.9 : 0.85;
-    const mileageAdjustment = 0.95;
-    const conditionMultiplier = manualInput.condition === 'excellent' ? 1.1 :
-                               manualInput.condition === 'good' ? 1.0 :
-                               manualInput.condition === 'fair' ? 0.9 : 0.8;
+    try {
+      const response = await fetch('/api/valuation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
 
-    const adjustedValue = baseValue * ageAdjustment * mileageAdjustment * conditionMultiplier;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `API error: ${response.statusText}`);
+      }
 
-    const result: ValuationResult = {
-      currentValue: {
-        retail: Math.round(adjustedValue * 1.15),
-        private: Math.round(adjustedValue),
-        tradeIn: Math.round(adjustedValue * 0.85)
-      },
-      depreciation: {
-        year1: Math.round(adjustedValue * 0.85),
-        year2: Math.round(adjustedValue * 0.72),
-        year3: Math.round(adjustedValue * 0.62),
-        year4: Math.round(adjustedValue * 0.54),
-        year5: Math.round(adjustedValue * 0.47)
-      },
-      marketData: {
-        demandLevel: 'High',
-        supplyLevel: 'Medium',
-        marketTrend: 'Stable',
-        popularityScore: 8.5
-      },
-      factors: {
-        age: 85,
-        mileage: 90,
-        condition: manualInput.condition === 'excellent' ? 95 :
-                  manualInput.condition === 'good' ? 85 :
-                  manualInput.condition === 'fair' ? 70 : 55,
-        serviceHistory: manualInput.serviceHistory === 'full' ? 95 :
-                       manualInput.serviceHistory === 'partial' ? 80 : 60,
-        modifications: manualInput.modifications === 'none' ? 100 :
-                      manualInput.modifications === 'tasteful' ? 105 : 80,
-        accidents: manualInput.accidents === 'none' ? 100 :
-                  manualInput.accidents === 'minor' ? 85 : 65
-      },
-      similarVehicles: [
-        { make: "Toyota", model: "Corolla", year: 2020, mileage: 35000, price: 16500, location: "London" },
-        { make: "Toyota", model: "Corolla", year: 2019, mileage: 42000, price: 15200, location: "Birmingham" },
-        { make: "Toyota", model: "Corolla", year: 2021, mileage: 28000, price: 17800, location: "Manchester" },
-        { make: "Toyota", model: "Corolla", year: 2020, mileage: 41000, price: 15800, location: "Bristol" }
-      ]
-    };
+      const apiData: any = await response.json(); // Using 'any' for ApiValuationResult as it's not defined here
 
-    setValuationResult(result);
-    setLoading(false);
+      const transformedResult: ValuationResult = {
+        registration: apiData.registration,
+        make: apiData.make,
+        model: apiData.model,
+        year: apiData.year,
+        mileage: apiData.mileage,
+        currentValue: {
+          retail: apiData.currentValue.retail,
+          private: apiData.currentValue.privateSale, // Corrected mapping
+          tradeIn: apiData.currentValue.tradeIn,
+        },
+        depreciation: { // Ensure defaults if depreciationForecast is missing
+          year1: apiData.depreciationForecast?.year1 || 0,
+          year2: apiData.depreciationForecast?.year2 || 0,
+          year3: apiData.depreciationForecast?.year3 || 0,
+          year4: apiData.depreciationForecast?.year4, 
+          year5: apiData.depreciationForecast?.year5,
+        },
+        marketData: {
+          demandLevel: apiData.marketInsights?.demand || 'Medium',
+          supplyLevel: apiData.marketInsights?.supply || 'Medium',
+          marketTrend: apiData.marketInsights?.trend || 'Stable',
+          popularityScore: apiData.marketInsights?.popularityScore || 0,
+        },
+        factors: { // Ensure defaults for factors
+          age: apiData.valuationFactors?.ageImpact || 0,
+          mileage: apiData.valuationFactors?.mileageImpact || 0,
+          condition: apiData.valuationFactors?.conditionImpact || (manualInput.condition === 'excellent' ? 95 : manualInput.condition === 'good' ? 85 : manualInput.condition === 'fair' ? 70 : 55), // Use client side if not from API
+          serviceHistory: apiData.valuationFactors?.serviceHistoryImpact || (manualInput.serviceHistory === 'full' ? 95 : manualInput.serviceHistory === 'partial' ? 80 : 60), // Use client side if not from API
+          modifications: 100, // Default as not in ApiValuationResult.valuationFactors
+          accidents: 100,   // Default as not in ApiValuationResult.valuationFactors
+        },
+        similarVehicles: apiData.comparableListings?.map((listing: any) => {
+          // Basic parsing for make/model/year/mileage from description
+          const descParts = listing.description.split(/,|\s-\s/); // Split by comma or " - "
+          let make, model, year, mileage;
+          if (descParts.length > 0) make = descParts[0].split(' ')[0]; // First word of first part
+          if (descParts.length > 0 && descParts[0].split(' ').length > 1) model = descParts[0].substring(make?.length || 0).trim();
+          
+          const yearMatch = listing.description.match(/\b(19|20)\d{2}\b/);
+          if (yearMatch) year = parseInt(yearMatch[0]);
+
+          const mileageMatch = listing.description.match(/(\d{1,3}(?:,\d{3})*|\d+)\s*k?\s*miles/i);
+          if (mileageMatch) mileage = parseInt(mileageMatch[1].replace(/,/g, ''));
+
+
+          return {
+            description: listing.description,
+            price: listing.price,
+            location: listing.location,
+            source: listing.source,
+            url: listing.url,
+            make: make || undefined,
+            model: model || undefined,
+            year: year || undefined,
+            mileage: mileage || undefined,
+          };
+        }) || [],
+      };
+      setValuationResult(transformedResult);
+
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(`Failed to fetch valuation: ${err.message}. Please try again.`);
+      } else {
+        setError('An unknown error occurred while fetching valuation.');
+      }
+      console.error("Error calculating valuation:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const formatCurrency = (amount: number) => {

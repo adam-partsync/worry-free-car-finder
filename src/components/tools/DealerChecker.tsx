@@ -26,46 +26,71 @@ import {
   AlertCircle
 } from "lucide-react";
 
-interface DealerInfo {
+interface DealerInfo { // Component's interface
   name: string;
-  address: string;
-  postcode: string;
-  phone: string;
-  website: string;
-  businessAge: number;
-  riskScore: number;
-  fcaRegistration: {
+  address: string; // Map from ApiDealerInfo.address, default to 'N/A'
+  postcode: string; // Map from ApiDealerInfo.postcode, default to 'N/A'
+  phone: string; // Map from ApiDealerInfo.phone, default to 'N/A'
+  website: string; // Map from ApiDealerInfo.websiteUrl, default to '#'
+  businessAge: number; // Map from ApiDealerInfo.yearsInBusiness, default to 0
+  riskScore: number; // Map from ApiDealerInfo.riskAssessment?.score, default to 0
+  fcaRegistration: { // Map from ApiDealerInfo.fcaStatus
     isRegistered: boolean;
     registrationNumber?: string;
-    permissions: string[];
-    status: string;
+    permissions: string[]; // Default to []
+    status: string; // Default to 'N/A'
   };
-  vatStatus: {
+  vatStatus: { // Based on ApiDealerInfo.vatNumber and ApiDealerInfo.vatVerified
     isRegistered: boolean;
     vatNumber?: string;
     isValid: boolean;
   };
-  reviews: {
-    platform: string;
-    rating: number;
-    totalReviews: number;
-    recentReviews: Array<{
+  reviews: Array<{ // Map from ApiDealerInfo.reviewsSummary?.sources
+    platform: string; // Map from platformName
+    rating: number; // Default to 0
+    totalReviews: number; // Map from reviewCount, default to 0
+    recentReviews: Array<{ // This part is not in ApiDealerInfo.reviewsSummary.sources directly.
+                           // Keep the structure but populate with placeholder or remove if not showing recent ones.
+                           // For now, let's assume it will be an empty array or derived differently.
       rating: number;
       comment: string;
       date: string;
       verified: boolean;
     }>;
-  }[];
-  warnings: string[];
-  recommendations: string[];
+    urlToReviews?: string; // From ApiDealerInfo.reviewsSummary.sources.urlToReviews
+  }>;
+  averageRatingOverall?: number; // From ApiDealerInfo.reviewsSummary?.averageRating
+  totalReviewsOverall?: number; // From ApiDealerInfo.reviewsSummary?.totalReviewCount
+  warnings: string[]; // Map from ApiDealerInfo.keyWarnings, default to []
+  recommendations: string[]; // Map from ApiDealerInfo.positiveHighlights, default to []
+  companyNumber?: string; // From ApiDealerInfo.companyNumber
 }
+
+// For reference
+// interface ApiDealerInfo {
+//   id: string;
+//   name: string;
+//   address?: string;
+//   postcode?: string;
+//   phone?: string;
+//   websiteUrl?: string;
+//   companyNumber?: string;
+//   vatNumber?: string;
+//   vatVerified?: boolean;
+//   fcaStatus?: { /* ... */ };
+//   reviewsSummary?: { /* ... */ };
+//   yearsInBusiness?: number;
+//   riskAssessment?: { /* ... */ };
+//   keyWarnings?: string[];
+//   positiveHighlights?: string[];
+// }
 
 export default function DealerChecker() {
   const [dealerName, setDealerName] = useState("");
   const [postcode, setPostcode] = useState("");
   const [dealerInfo, setDealerInfo] = useState<DealerInfo | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<string | null>(""); // Initialize with null for better conditional checks
 
   const handleCheck = async () => {
     if (!dealerName.trim()) {
@@ -74,79 +99,68 @@ export default function DealerChecker() {
     }
 
     setLoading(true);
-    setError("");
+    setError(null);
     setDealerInfo(null);
 
-    // Simulate API call
-    setTimeout(() => {
-      // Mock data for demonstration
-      const mockData: DealerInfo = {
-        name: dealerName.trim(),
-        address: "123 High Street, Sample Town",
-        postcode: postcode.trim() || "SW1A 1AA",
-        phone: "020 1234 5678",
-        website: "www.sampledealers.co.uk",
-        businessAge: 12,
-        riskScore: 85, // Higher is better (0-100)
+    try {
+      const queryParams = new URLSearchParams();
+      queryParams.append("dealerName", dealerName.trim());
+      if (postcode.trim()) {
+        queryParams.append("postcode", postcode.trim());
+      }
+
+      const response = await fetch(`/api/dealers/check?${queryParams.toString()}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({})); // Try to parse error
+        throw new Error(errorData.error || `Network error: ${response.statusText}`);
+      }
+      
+      const apiData: any = await response.json(); // Using 'any' for ApiDealerInfo as it's not defined here
+
+      const transformedDealerInfo: DealerInfo = {
+        name: apiData.name,
+        address: apiData.address || 'N/A',
+        postcode: apiData.postcode || 'N/A',
+        phone: apiData.phone || 'N/A',
+        website: apiData.websiteUrl || '#',
+        businessAge: apiData.yearsInBusiness || 0,
+        riskScore: apiData.riskAssessment?.score || 0,
         fcaRegistration: {
-          isRegistered: true,
-          registrationNumber: "FCA123456",
-          permissions: ["Credit Broking", "Vehicle Finance"],
-          status: "Active"
+          isRegistered: apiData.fcaStatus?.isRegistered || false,
+          registrationNumber: apiData.fcaStatus?.registrationNumber,
+          permissions: apiData.fcaStatus?.permissions || [],
+          status: apiData.fcaStatus?.status || 'N/A',
         },
         vatStatus: {
-          isRegistered: true,
-          vatNumber: "GB123456789",
-          isValid: true
+          isRegistered: !!apiData.vatNumber,
+          vatNumber: apiData.vatNumber,
+          isValid: apiData.vatVerified || false,
         },
-        reviews: [
-          {
-            platform: "Google Reviews",
-            rating: 4.2,
-            totalReviews: 127,
-            recentReviews: [
-              {
-                rating: 5,
-                comment: "Excellent service, very professional and honest throughout the process.",
-                date: "2024-01-15",
-                verified: true
-              },
-              {
-                rating: 4,
-                comment: "Good selection of cars, fair prices. Minor delay with paperwork.",
-                date: "2024-01-10",
-                verified: true
-              },
-              {
-                rating: 2,
-                comment: "Car had undisclosed issues. Eventually resolved but took time.",
-                date: "2024-01-05",
-                verified: false
-              }
-            ]
-          },
-          {
-            platform: "Trustpilot",
-            rating: 4.0,
-            totalReviews: 89,
-            recentReviews: []
-          }
-        ],
-        warnings: [
-          "Some negative reviews mention undisclosed vehicle issues",
-          "Response time to customer queries can be slow"
-        ],
-        recommendations: [
-          "Generally positive customer feedback",
-          "Properly registered with relevant authorities",
-          "Established business with good track record",
-          "Request detailed vehicle history before purchase"
-        ]
+        reviews: apiData.reviewsSummary?.sources?.map((source: any) => ({ // Using 'any' for source
+          platform: source.platformName,
+          rating: source.rating || 0,
+          totalReviews: source.reviewCount || 0,
+          recentReviews: [], // Placeholder, as API doesn't provide this detail per source
+          urlToReviews: source.urlToReviews,
+        })) || [],
+        averageRatingOverall: apiData.reviewsSummary?.averageRating,
+        totalReviewsOverall: apiData.reviewsSummary?.totalReviewCount,
+        warnings: apiData.keyWarnings || [],
+        recommendations: apiData.positiveHighlights || [],
+        companyNumber: apiData.companyNumber,
       };
+      setDealerInfo(transformedDealerInfo);
 
-      setDealerInfo(mockData);
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("An unknown error occurred while checking the dealer.");
+      }
+      console.error("Dealer check error:", err);
+    } finally {
       setLoading(false);
-    }, 2000);
+    }
   };
 
   const getRiskColor = (score: number) => {

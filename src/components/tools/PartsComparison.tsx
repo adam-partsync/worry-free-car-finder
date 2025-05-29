@@ -30,35 +30,35 @@ import {
   Mail
 } from "lucide-react";
 
-interface PartResult {
+interface PartResult { // This is the component's interface
   id: string;
   name: string;
   partNumber: string;
   brand: string;
   price: number;
   originalPrice?: number;
-  supplier: string;
-  supplierRating: number;
-  supplierReviews: number;
-  inStock: boolean;
-  stockLevel: 'high' | 'medium' | 'low';
-  delivery: {
-    time: string;
-    cost: number;
-    options: string[];
+  supplier: string; // Map from ApiPartResult.supplierName
+  supplierRating: number; // Map from ApiPartResult.supplierRating (ensure default like 0 if undefined)
+  supplierReviews: number; // Map from ApiPartResult.supplierReviewCount (ensure default like 0 if undefined)
+  inStock: boolean; // Map from ApiPartResult.isInStock
+  stockLevel: 'high' | 'medium' | 'low' | string; // Map from ApiPartResult.stockLevelDescription (provide default)
+  delivery: { // Map from ApiPartResult.deliveryInfo
+    time: string; // Map from deliveryInfo.timeText
+    cost: number; // Map from deliveryInfo.costAmount
+    options: string[]; // Map from deliveryInfo.availableOptions (ensure default like [])
   };
-  warranty: string;
-  quality: 'OEM' | 'OE' | 'Aftermarket' | 'Pattern';
-  compatibility: string[];
-  images: string[];
-  features: string[];
-  supplierInfo: {
-    location: string;
-    phone?: string;
-    website?: string;
-    email?: string;
-    businessHours: string;
-    returnPolicy: string;
+  warranty: string; // Map from ApiPartResult.warrantyInformation
+  quality: 'OEM' | 'OE' | 'Aftermarket' | 'Pattern' | string; // Map from ApiPartResult.qualityDescription
+  compatibility: string[]; // Map from ApiPartResult.compatibilityNotes (ensure default like [])
+  images: string[]; // Map from ApiPartResult.imageUrls
+  features: string[]; // Map from ApiPartResult.featureList (ensure default like [])
+  supplierInfo: { // Map from ApiPartResult.supplierDetails
+    location: string; // Map from supplierDetails.locationName (ensure default like 'N/A')
+    phone?: string; // Map from supplierDetails.phoneNumber
+    website?: string; // Map from supplierDetails.websiteUrl
+    email?: string; // Map from supplierDetails.emailAddress
+    businessHours: string; // Map from supplierDetails.businessHoursInfo (ensure default like 'N/A')
+    returnPolicy: string; // Map from supplierDetails.returnPolicyInfo (ensure default like 'N/A')
   };
 }
 
@@ -76,157 +76,39 @@ interface SearchFilters {
   sortBy: 'price' | 'rating' | 'delivery' | 'relevance';
 }
 
-// Mock parts database
-const mockParts: PartResult[] = [
-  {
-    id: "1",
-    name: "Front Brake Pads Set",
-    partNumber: "BP-T-COR-001",
-    brand: "Bosch",
-    price: 45.99,
-    originalPrice: 52.99,
-    supplier: "Euro Car Parts",
-    supplierRating: 4.5,
-    supplierReviews: 12847,
-    inStock: true,
-    stockLevel: 'high',
-    delivery: {
-      time: "Next Day",
-      cost: 0,
-      options: ["Next Day (Free)", "Same Day (£5.99)", "Click & Collect"]
-    },
-    warranty: "2 Years",
-    quality: "OE",
-    compatibility: ["Toyota Corolla 2018-2024", "Toyota Corolla Hybrid 2019-2024"],
-    images: ["https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400"],
-    features: ["Low dust formula", "Reduced noise", "ECE R90 approved"],
-    supplierInfo: {
-      location: "London, UK",
-      phone: "0800 123 4567",
-      website: "eurocarparts.com",
-      email: "support@eurocarparts.com",
-      businessHours: "Mon-Fri 8am-8pm, Sat 8am-6pm",
-      returnPolicy: "30 days return policy"
-    }
-  },
-  {
-    id: "2",
-    name: "Front Brake Pads Set",
-    partNumber: "FBP-COR-20",
-    brand: "Mintex",
-    price: 38.50,
-    supplier: "GSF Car Parts",
-    supplierRating: 4.2,
-    supplierReviews: 8934,
-    inStock: true,
-    stockLevel: 'medium',
-    delivery: {
-      time: "1-2 Days",
-      cost: 4.99,
-      options: ["Standard (£4.99)", "Express (£9.99)", "Click & Collect"]
-    },
-    warranty: "18 Months",
-    quality: "Aftermarket",
-    compatibility: ["Toyota Corolla 2018-2024"],
-    images: ["https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400"],
-    features: ["Value for money", "Good performance"],
-    supplierInfo: {
-      location: "Birmingham, UK",
-      phone: "0121 456 7890",
-      website: "gsfcarparts.com",
-      businessHours: "Mon-Sat 8am-7pm",
-      returnPolicy: "14 days return policy"
-    }
-  },
-  {
-    id: "3",
-    name: "Front Brake Pads Set - Premium",
-    partNumber: "23587",
-    brand: "Brembo",
-    price: 89.99,
-    supplier: "Platinum Parts",
-    supplierRating: 4.8,
-    supplierReviews: 3421,
-    inStock: true,
-    stockLevel: 'low',
-    delivery: {
-      time: "2-3 Days",
-      cost: 0,
-      options: ["Free Delivery", "Express (£7.99)"]
-    },
-    warranty: "3 Years",
-    quality: "OEM",
-    compatibility: ["Toyota Corolla 2018-2024", "Toyota Corolla GR 2022-2024"],
-    images: ["https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400"],
-    features: ["Racing grade", "Superior stopping power", "Low fade"],
-    supplierInfo: {
-      location: "Manchester, UK",
-      phone: "0161 789 0123",
-      website: "platinumparts.co.uk",
-      businessHours: "Mon-Fri 9am-6pm",
-      returnPolicy: "60 days return policy"
-    }
-  },
-  {
-    id: "4",
-    name: "Engine Oil Filter",
-    partNumber: "OF-T-001",
-    brand: "Mann Filter",
-    price: 12.99,
-    supplier: "Euro Car Parts",
-    supplierRating: 4.5,
-    supplierReviews: 12847,
-    inStock: true,
-    stockLevel: 'high',
-    delivery: {
-      time: "Next Day",
-      cost: 0,
-      options: ["Next Day (Free)", "Same Day (£5.99)", "Click & Collect"]
-    },
-    warranty: "1 Year",
-    quality: "OE",
-    compatibility: ["Toyota Corolla 2018-2024", "Toyota Corolla Hybrid 2019-2024"],
-    images: ["https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=400"],
-    features: ["High filtration efficiency", "Long service life"],
-    supplierInfo: {
-      location: "London, UK",
-      phone: "0800 123 4567",
-      website: "eurocarparts.com",
-      businessHours: "Mon-Fri 8am-8pm, Sat 8am-6pm",
-      returnPolicy: "30 days return policy"
-    }
-  },
-  {
-    id: "5",
-    name: "Air Filter",
-    partNumber: "AF-COR-2020",
-    brand: "K&N",
-    price: 34.99,
-    originalPrice: 42.99,
-    supplier: "PartsPal",
-    supplierRating: 4.3,
-    supplierReviews: 5672,
-    inStock: true,
-    stockLevel: 'medium',
-    delivery: {
-      time: "1-2 Days",
-      cost: 3.99,
-      options: ["Standard (£3.99)", "Express (£8.99)"]
-    },
-    warranty: "Lifetime",
-    quality: "Aftermarket",
-    compatibility: ["Toyota Corolla 2018-2024"],
-    images: ["https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=400"],
-    features: ["Washable & reusable", "Improved airflow", "Million mile warranty"],
-    supplierInfo: {
-      location: "Leeds, UK",
-      phone: "0113 234 5678",
-      website: "partspal.co.uk",
-      businessHours: "Mon-Fri 8am-6pm",
-      returnPolicy: "30 days return policy"
-    }
-  }
-];
+// ApiPartResult for reference during transformation
+// interface ApiPartResult {
+//   id: string;
+//   name: string;
+//   partNumber: string;
+//   brand: string;
+//   price: number;
+//   originalPrice?: number;
+//   supplierName: string;
+//   supplierRating?: number;
+//   supplierReviewCount?: number;
+//   isInStock: boolean;
+//   stockLevelDescription?: 'high' | 'medium' | 'low' | string;
+//   deliveryInfo: {
+//     timeText: string;
+//     costAmount: number;
+//     availableOptions?: string[];
+//   };
+//   warrantyInformation: string;
+//   qualityDescription: 'OEM' | 'OE' | 'Aftermarket' | 'Pattern' | string;
+//   compatibilityNotes?: string[];
+//   imageUrls: string[];
+//   featureList?: string[];
+//   supplierDetails?: {
+//     locationName?: string;
+//     phoneNumber?: string;
+//     websiteUrl?: string;
+//     emailAddress?: string;
+//     businessHoursInfo?: string;
+//     returnPolicyInfo?: string;
+//   };
+// }
+
 
 const partCategories = [
   { value: 'brakes', label: 'Brakes & Brake Parts', icon: '🛑' },
@@ -267,44 +149,6 @@ export default function PartsComparison() {
       return;
     }
 
-    setLoading(true);
-    setActiveTab("results");
-
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    // Filter mock data based on search criteria
-    const filteredResults = mockParts.filter(part => {
-      const matchesName = part.name.toLowerCase().includes(filters.partName.toLowerCase());
-      const matchesMake = !filters.make || part.compatibility.some(comp =>
-        comp.toLowerCase().includes(filters.make.toLowerCase())
-      );
-      const matchesPrice = !filters.maxPrice || part.price <= Number(filters.maxPrice);
-      const matchesQuality = !filters.quality || part.quality === filters.quality;
-      const matchesStock = !filters.inStockOnly || part.inStock;
-
-      return matchesName && matchesMake && matchesPrice && matchesQuality && matchesStock;
-    });
-
-    // Sort results
-    switch (filters.sortBy) {
-      case 'price':
-        filteredResults.sort((a, b) => a.price - b.price);
-        break;
-      case 'rating':
-        filteredResults.sort((a, b) => b.supplierRating - a.supplierRating);
-        break;
-      case 'delivery':
-        filteredResults.sort((a, b) => a.delivery.cost - b.delivery.cost);
-        break;
-      default:
-        // Keep original order for relevance
-        break;
-    }
-
-    setResults(filteredResults);
-    setLoading(false);
-  };
 
   const toggleSavePart = (partId: string) => {
     setSavedParts(prev =>

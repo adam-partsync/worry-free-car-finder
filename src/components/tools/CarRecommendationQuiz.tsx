@@ -37,11 +37,12 @@ interface QuizAnswer {
   value: string | string[] | number;
 }
 
+// This interface should be compatible with ApiCarRecommendation from the API
 interface CarRecommendation {
   make: string;
   model: string;
-  year: string;
-  price: string;
+  year: string; // Or number
+  price: string; // Or an object like {min: number, max: number, currency: string}
   matchScore: number;
   reasons: string[];
   pros: string[];
@@ -182,99 +183,14 @@ const quizQuestions: QuizQuestion[] = [
   }
 ];
 
-// Mock car database for recommendations
-const carDatabase: CarRecommendation[] = [
-  {
-    make: "Toyota",
-    model: "Corolla",
-    year: "2023",
-    price: "£25,000 - £30,000",
-    matchScore: 0,
-    reasons: ["Excellent reliability", "Great fuel economy", "Good resale value"],
-    pros: ["Very reliable", "Low running costs", "Good warranty"],
-    cons: ["Not very exciting", "Interior could be better"],
-    suitability: "Perfect for commuters who prioritize reliability",
-    image: "https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=400&h=250&fit=crop&auto=format",
-    fuelType: "Hybrid",
-    bodyType: "Hatchback"
-  },
-  {
-    make: "Honda",
-    model: "Civic",
-    year: "2023",
-    price: "£27,000 - £32,000",
-    matchScore: 0,
-    reasons: ["Sporty design", "Great build quality", "Advanced safety features"],
-    pros: ["Fun to drive", "Well built", "Good technology"],
-    cons: ["Firm ride", "Higher insurance"],
-    suitability: "Great for those wanting style with substance",
-    image: "https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=400&h=250&fit=crop&auto=format",
-    fuelType: "Petrol",
-    bodyType: "Hatchback"
-  },
-  {
-    make: "BMW",
-    model: "3 Series",
-    year: "2022",
-    price: "£35,000 - £45,000",
-    matchScore: 0,
-    reasons: ["Premium brand", "Excellent driving dynamics", "Strong performance"],
-    pros: ["Great driving experience", "Premium interior", "Strong resale"],
-    cons: ["Higher running costs", "Complex electronics"],
-    suitability: "Perfect for driving enthusiasts with higher budget",
-    image: "https://images.unsplash.com/photo-1555215695-3004980ad54e?w=400&h=250&fit=crop&auto=format",
-    fuelType: "Petrol",
-    bodyType: "Saloon"
-  },
-  {
-    make: "Volkswagen",
-    model: "Golf",
-    year: "2023",
-    price: "£22,000 - £28,000",
-    matchScore: 0,
-    reasons: ["Well-rounded package", "Good build quality", "Practical"],
-    pros: ["Solid build", "Good to drive", "Practical"],
-    cons: ["Can be expensive to service", "Interior aging"],
-    suitability: "Excellent all-rounder for most users",
-    image: "https://images.unsplash.com/photo-1609521263047-f8f205293f24?w=400&h=250&fit=crop&auto=format",
-    fuelType: "Petrol",
-    bodyType: "Hatchback"
-  },
-  {
-    make: "Mazda",
-    model: "CX-5",
-    year: "2023",
-    price: "£30,000 - £38,000",
-    matchScore: 0,
-    reasons: ["Stylish SUV", "Good driving dynamics", "Reliable"],
-    pros: ["Attractive design", "Fun to drive", "Reliable"],
-    cons: ["Interior space could be better", "Road noise"],
-    suitability: "Great for families wanting a stylish SUV",
-    image: "https://images.unsplash.com/photo-1609104004977-e8d7ff2c3a79?w=400&h=250&fit=crop&auto=format",
-    fuelType: "Petrol",
-    bodyType: "SUV"
-  },
-  {
-    make: "Nissan",
-    model: "Leaf",
-    year: "2023",
-    price: "£28,000 - £35,000",
-    matchScore: 0,
-    reasons: ["Zero emissions", "Low running costs", "Advanced technology"],
-    pros: ["No fuel costs", "Very quiet", "Environmentally friendly"],
-    cons: ["Limited range", "Charging infrastructure"],
-    suitability: "Perfect for environmentally conscious city drivers",
-    image: "https://images.unsplash.com/photo-1593941707882-a5bac6861d75?w=400&h=250&fit=crop&auto=format",
-    fuelType: "Electric",
-    bodyType: "Hatchback"
-  }
-];
 
 export function CarRecommendationQuiz() {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<QuizAnswer[]>([]);
   const [showResults, setShowResults] = useState(false);
   const [recommendations, setRecommendations] = useState<CarRecommendation[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
   const progress = ((currentQuestion + 1) / quizQuestions.length) * 100;
 
@@ -292,7 +208,7 @@ export function CarRecommendationQuiz() {
     if (currentQuestion < quizQuestions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
     } else {
-      generateRecommendations();
+      generateRecommendations(); // This will now be async
     }
   };
 
@@ -302,99 +218,38 @@ export function CarRecommendationQuiz() {
     }
   };
 
-  const generateRecommendations = () => {
-    // Simple scoring algorithm based on answers
-    const scoredCars = carDatabase.map(car => {
-      let score = 0;
-      const reasons: string[] = [];
+  const generateRecommendations = async () => {
+    setLoading(true);
+    setError(null);
+    setShowResults(false); // Hide previous results/errors immediately
+    try {
+      const response = await fetch('/api/cars/recommend', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(answers), // Send quiz answers
+      });
 
-      // Budget scoring
-      const budgetAnswer = answers.find(a => a.questionId === "budget")?.value as string;
-      if (budgetAnswer) {
-        const carPrice = extractPriceRange(car.price);
-        const userBudget = extractBudgetRange(budgetAnswer);
-        if (carPrice.min <= userBudget.max && carPrice.max >= userBudget.min) {
-          score += 25;
-          reasons.push("Within your budget range");
-        }
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({})); // Try to parse error details
+        console.error("API Error Response:", errorData);
+        throw new Error(errorData.details || `Network response was not ok (status: ${response.status})`);
       }
-
-      // Primary use scoring
-      const useAnswer = answers.find(a => a.questionId === "primary-use")?.value as string;
-      if (useAnswer) {
-        if (useAnswer.includes("commuting") && car.fuelType === "Hybrid") {
-          score += 20;
-          reasons.push("Excellent for daily commuting");
-        }
-        if (useAnswer.includes("family") && car.bodyType === "SUV") {
-          score += 20;
-          reasons.push("Great for family use");
-        }
-        if (useAnswer.includes("business") && car.make === "BMW") {
-          score += 15;
-          reasons.push("Professional image");
-        }
+      const data: CarRecommendation[] = await response.json();
+      setRecommendations(data);
+      setShowResults(true);
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(`Failed to fetch recommendations: ${err.message}. Please try again.`);
+      } else {
+        setError('Failed to fetch recommendations due to an unknown error. Please try again.');
       }
-
-      // Body type preference
-      const bodyTypeAnswer = answers.find(a => a.questionId === "body-type")?.value as string[];
-      if (bodyTypeAnswer && bodyTypeAnswer.includes(car.bodyType)) {
-        score += 15;
-        reasons.push("Matches your preferred body type");
-      }
-
-      // Fuel type preference
-      const fuelAnswer = answers.find(a => a.questionId === "fuel-type")?.value as string;
-      if (fuelAnswer) {
-        if (fuelAnswer.includes("Hybrid") && car.fuelType === "Hybrid") {
-          score += 20;
-          reasons.push("Hybrid efficiency you requested");
-        }
-        if (fuelAnswer.includes("Electric") && car.fuelType === "Electric") {
-          score += 20;
-          reasons.push("Zero emissions as preferred");
-        }
-      }
-
-      // Reliability preference
-      const reliabilityAnswer = answers.find(a => a.questionId === "reliability")?.value as string;
-      if (reliabilityAnswer && reliabilityAnswer.includes("Most important") &&
-          (car.make === "Toyota" || car.make === "Honda")) {
-        score += 15;
-        reasons.push("Excellent reliability record");
-      }
-
-      return {
-        ...car,
-        matchScore: score,
-        reasons: reasons.length > 0 ? reasons : car.reasons
-      };
-    });
-
-    // Sort by score and take top 3
-    const topRecommendations = scoredCars
-      .sort((a, b) => b.matchScore - a.matchScore)
-      .slice(0, 3);
-
-    setRecommendations(topRecommendations);
-    setShowResults(true);
-  };
-
-  const extractPriceRange = (priceString: string) => {
-    // Extract min and max from "£25,000 - £30,000"
-    const numbers = priceString.match(/[\d,]+/g) || [];
-    const min = Number.parseInt(numbers[0]?.replace(/,/g, '') || '0');
-    const max = Number.parseInt(numbers[1]?.replace(/,/g, '') || min.toString());
-    return { min, max };
-  };
-
-  const extractBudgetRange = (budgetString: string) => {
-    if (budgetString.includes("Under £10,000")) return { min: 0, max: 10000 };
-    if (budgetString.includes("£10,000 - £20,000")) return { min: 10000, max: 20000 };
-    if (budgetString.includes("£20,000 - £35,000")) return { min: 20000, max: 35000 };
-    if (budgetString.includes("£35,000 - £50,000")) return { min: 35000, max: 50000 };
-    if (budgetString.includes("Over £50,000")) return { min: 50000, max: 100000 };
-    return { min: 0, max: 100000 };
+      setShowResults(false); // Ensure results are not shown on error
+      console.error("Generate Recommendations Error:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const restartQuiz = () => {
@@ -402,9 +257,40 @@ export function CarRecommendationQuiz() {
     setAnswers([]);
     setShowResults(false);
     setRecommendations([]);
+    setError(null);
+    setLoading(false);
   };
+  
+  if (loading) {
+    return (
+      <div className="max-w-3xl mx-auto space-y-6 text-center py-10">
+        <div className="flex justify-center items-center mb-4">
+          <Car className="h-12 w-12 animate-pulse text-blue-600" />
+        </div>
+        <h2 className="text-2xl font-semibold">Fetching Your Recommendations...</h2>
+        <p className="text-gray-600">Please wait a moment while we analyze your answers.</p>
+        <Progress value={progress} className="w-full max-w-md mx-auto mt-4" />
+      </div>
+    );
+  }
 
-  if (showResults) {
+  if (error) {
+    return (
+      <div className="max-w-3xl mx-auto space-y-6 text-center py-10">
+        <Alert variant="destructive">
+          <AlertDescription className="font-semibold">
+            {error}
+          </AlertDescription>
+        </Alert>
+        <Button onClick={restartQuiz} variant="outline" size="lg">
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Try Quiz Again
+        </Button>
+      </div>
+    );
+  }
+
+  if (showResults && recommendations.length > 0) {
     return (
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="text-center">
