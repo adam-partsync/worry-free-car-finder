@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pure JS Car Search</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background-color: #f9fafb;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            color: #1f2937;
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #6b7280;
+            font-size: 1rem;
+        }
+
+        .search-box {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .search-form {
+            display: inline-flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .search-input {
+            padding: 12px 16px;
+            border: 2px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 16px;
+            width: 300px;
+            outline: none;
+        }
+
+        .search-input:focus {
+            border-color: #3b82f6;
+        }
+
+        .search-btn {
+            padding: 12px 24px;
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .search-btn:disabled {
+            background-color: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .examples {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .examples p {
+            margin-bottom: 10px;
+            color: #6b7280;
+        }
+
+        .example-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .example-btn {
+            padding: 8px 16px;
+            background-color: #f3f4f6;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .example-btn:hover {
+            background-color: #e5e7eb;
+        }
+
+        .error {
+            padding: 16px;
+            background-color: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+            color: #dc2626;
+            margin-bottom: 20px;
+            text-align: center;
+            display: none;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6b7280;
+            display: none;
+        }
+
+        .results {
+            display: none;
+        }
+
+        .results h2 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #1f2937;
+        }
+
+        .car-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .car-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            overflow: hidden;
+            background-color: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .car-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .car-content {
+            padding: 16px;
+        }
+
+        .car-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #1f2937;
+        }
+
+        .car-price-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .car-price {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #059669;
+        }
+
+        .car-details {
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .car-location {
+            color: #6b7280;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        .footer {
+            margin-top: 40px;
+            padding: 20px;
+            background-color: #f9fafb;
+            border-radius: 8px;
+            text-align: center;
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🚗 Pure JavaScript Car Search</h1>
+            <p>No React, No Next.js - Pure HTML/JS testing interface</p>
+        </div>
+
+        <!-- Search Box -->
+        <div class="search-box">
+            <div class="search-form">
+                <input
+                    type="text"
+                    id="searchInput"
+                    class="search-input"
+                    placeholder="e.g., sporty car under £15000"
+                />
+                <button id="searchBtn" class="search-btn">Search</button>
+            </div>
+        </div>
+
+        <!-- Quick Examples -->
+        <div class="examples">
+            <p>Quick examples:</p>
+            <div class="example-buttons">
+                <button class="example-btn" data-query="Budget car under £5000">Budget car under £5000</button>
+                <button class="example-btn" data-query="Sporty 2 seater">Sporty 2 seater</button>
+                <button class="example-btn" data-query="Family SUV">Family SUV</button>
+                <button class="example-btn" data-query="First car for teenager">First car for teenager</button>
+            </div>
+        </div>
+
+        <!-- Error Display -->
+        <div id="errorDiv" class="error"></div>
+
+        <!-- Loading -->
+        <div id="loadingDiv" class="loading">
+            <h3>🔍 Searching for cars...</h3>
+            <p>Please wait while we find the best vehicles for you</p>
+        </div>
+
+        <!-- Results -->
+        <div id="resultsDiv" class="results">
+            <h2 id="resultsTitle">Found vehicles</h2>
+            <div id="carGrid" class="car-grid"></div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p><strong>Pure JavaScript Interface</strong> • No frameworks • Direct API calls</p>
+            <p>🔍 Tests the car search API without any React/Next.js dependencies</p>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let isLoading = false;
+
+        // DOM elements
+        const searchInput = document.getElementById('searchInput');
+        const searchBtn = document.getElementById('searchBtn');
+        const errorDiv = document.getElementById('errorDiv');
+        const loadingDiv = document.getElementById('loadingDiv');
+        const resultsDiv = document.getElementById('resultsDiv');
+        const resultsTitle = document.getElementById('resultsTitle');
+        const carGrid = document.getElementById('carGrid');
+        const exampleBtns = document.querySelectorAll('.example-btn');
+
+        // Event listeners
+        searchBtn.addEventListener('click', handleSearch);
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleSearch();
+        });
+
+        // Example button event listeners
+        exampleBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                searchInput.value = btn.dataset.query;
+            });
+        });
+
+        // Search function
+        async function handleSearch() {
+            const query = searchInput.value.trim();
+            if (!query || isLoading) return;
+
+            console.log('Starting search for:', query);
+
+            // UI state
+            isLoading = true;
+            searchBtn.disabled = true;
+            searchBtn.textContent = 'Searching...';
+            errorDiv.style.display = 'none';
+            resultsDiv.style.display = 'none';
+            loadingDiv.style.display = 'block';
+
+            try {
+                console.log('Making API request...');
+                const response = await fetch('/api/search/ai', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query })
+                });
+
+                console.log('Response status:', response.status);
+
+                if (!response.ok) {
+                    throw new Error(`Search failed: ${response.status} ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                console.log('API response data:', data);
+
+                if (data.vehicles && Array.isArray(data.vehicles) && data.vehicles.length > 0) {
+                    displayResults(data.vehicles);
+                } else {
+                    showError('No vehicles found for your search. Try a different query.');
+                }
+
+            } catch (error) {
+                console.error('Search error:', error);
+                showError(error.message || 'Search failed. Please try again.');
+            } finally {
+                // Reset UI state
+                isLoading = false;
+                searchBtn.disabled = false;
+                searchBtn.textContent = 'Search';
+                loadingDiv.style.display = 'none';
+            }
+        }
+
+        // Display results
+        function displayResults(vehicles) {
+            console.log('Displaying', vehicles.length, 'vehicles');
+
+            resultsTitle.textContent = `Found ${vehicles.length} vehicles`;
+            carGrid.innerHTML = '';
+
+            vehicles.forEach(car => {
+                const carCard = createCarCard(car);
+                carGrid.appendChild(carCard);
+            });
+
+            resultsDiv.style.display = 'block';
+        }
+
+        // Create car card element
+        function createCarCard(car) {
+            const card = document.createElement('div');
+            card.className = 'car-card';
+
+            // Fallback image
+            const imageUrl = car.image || 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=400&h=200&fit=crop';
+
+            card.innerHTML = `
+                <img
+                    src="${imageUrl}"
+                    alt="${car.title || 'Car'}"
+                    class="car-image"
+                    onerror="this.src='https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=400&h=200&fit=crop'"
+                />
+                <div class="car-content">
+                    <h3 class="car-title">${car.title || 'Vehicle'}</h3>
+                    <div class="car-price-row">
+                        <span class="car-price">£${car.price ? car.price.toLocaleString() : 'N/A'}</span>
+                        <span class="car-details">${car.year || 'N/A'} • ${car.mileage ? car.mileage.toLocaleString() : 'N/A'} miles</span>
+                    </div>
+                    <div class="car-location">${car.location || 'Location N/A'}</div>
+                    <div class="car-location">${car.seller || 'Seller N/A'}</div>
+                </div>
+            `;
+
+            return card;
+        }
+
+        // Show error
+        function showError(message) {
+            console.error('Showing error:', message);
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            resultsDiv.style.display = 'none';
+        }
+
+        // Initial log
+        console.log('Pure JavaScript car search page loaded');
+    </script>
+</body>
+</html>

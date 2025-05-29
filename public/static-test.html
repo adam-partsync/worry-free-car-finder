@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Static Test - Car Search</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2563eb;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #2563eb;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #1d4ed8;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f0f9ff;
+            border: 1px solid #0ea5e9;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #f0fdf4;
+            border-color: #22c55e;
+            color: #166534;
+        }
+        .error {
+            background-color: #fef2f2;
+            border-color: #ef4444;
+            color: #dc2626;
+        }
+        .car-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .car-title {
+            font-weight: bold;
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+        .car-price {
+            font-size: 20px;
+            font-weight: bold;
+            color: #059669;
+            margin-bottom: 8px;
+        }
+        .car-details {
+            font-size: 14px;
+            color: #64748b;
+        }
+        .source-badge {
+            display: inline-block;
+            background: #dcfce7;
+            color: #166534;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚗 Static Car Search Test</h1>
+        <p><strong>Status:</strong> This is a pure HTML page - no React, no Next.js compilation issues</p>
+
+        <form id="searchForm">
+            <div class="form-group">
+                <label for="make">Make:</label>
+                <select id="make">
+                    <option value="">Select Make</option>
+                    <option value="Honda">Honda</option>
+                    <option value="Toyota">Toyota</option>
+                    <option value="BMW">BMW</option>
+                    <option value="Ford">Ford</option>
+                    <option value="Volkswagen">Volkswagen</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="budget">Budget (£):</label>
+                <input type="number" id="budget" placeholder="15000">
+            </div>
+
+            <div class="form-group">
+                <label for="year">Year From:</label>
+                <input type="number" id="year" placeholder="2018">
+            </div>
+
+            <button type="submit" id="searchBtn">🔍 Search Cars</button>
+        </form>
+
+        <div id="result" style="display: none;"></div>
+    </div>
+
+    <script>
+        console.log('🟢 Static HTML page loaded successfully');
+
+        document.getElementById('searchForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            console.log('🟢 Form submitted');
+
+            const make = document.getElementById('make').value;
+            const budget = document.getElementById('budget').value;
+            const year = document.getElementById('year').value;
+
+            console.log('🟢 Form data:', { make, budget, year });
+
+            if (!make && !budget) {
+                alert('Please select a make or enter a budget');
+                return;
+            }
+
+            const submitBtn = document.getElementById('searchBtn');
+            const resultDiv = document.getElementById('result');
+
+            submitBtn.textContent = '🔄 Searching...';
+            submitBtn.disabled = true;
+
+            try {
+                const queryParts = [];
+                if (make) queryParts.push(make);
+                if (budget) queryParts.push(`under £${budget}`);
+                if (year) queryParts.push(`from ${year}`);
+
+                const query = queryParts.join(', ');
+                console.log('🟢 API Query:', query);
+
+                const response = await fetch('/api/search/ai', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query }),
+                });
+
+                console.log('🟢 API Response Status:', response.status);
+
+                const data = await response.json();
+                console.log('🟢 API Response Data:', data);
+
+                if (response.ok && data.listings) {
+                    let html = `<div class="result success">
+                        <h3>✅ Found ${data.listings.length} Vehicles</h3>
+                        <p><strong>Multi-Platform Sources:</strong> ${data.source || 'Various platforms'}</p>
+                    </div>`;
+
+                    data.listings.slice(0, 5).forEach(car => {
+                        html += `
+                            <div class="car-card">
+                                <div class="car-title">${car.title}</div>
+                                <div class="car-price">£${car.price ? car.price.toLocaleString() : 'N/A'}</div>
+                                <div class="car-details">
+                                    📅 ${car.year} • 🛣️ ${car.mileage ? car.mileage.toLocaleString() : 'N/A'} miles<br>
+                                    📍 ${car.location} • 🏪 ${car.seller}
+                                </div>
+                                ${car.source ? `<div class="source-badge">${car.source}</div>` : ''}
+                            </div>
+                        `;
+                    });
+
+                    resultDiv.innerHTML = html;
+                    resultDiv.style.display = 'block';
+
+                    console.log('🟢 SUCCESS: Displayed results');
+
+                } else {
+                    throw new Error(data.error || 'Search failed');
+                }
+
+            } catch (error) {
+                console.error('🔴 ERROR:', error);
+
+                resultDiv.innerHTML = `
+                    <div class="result error">
+                        <h3>❌ Search Failed</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <p>Check the browser console for more details</p>
+                    </div>
+                `;
+                resultDiv.style.display = 'block';
+            }
+
+            submitBtn.textContent = '🔍 Search Cars';
+            submitBtn.disabled = false;
+        });
+
+        // Test API availability
+        fetch('/api/search/ai', { method: 'OPTIONS' })
+            .then(() => console.log('🟢 API endpoint is accessible'))
+            .catch(err => console.log('🔴 API endpoint issue:', err));
+    </script>
+</body>
+</html>
