@@ -29,184 +29,78 @@ import {
   AlertTriangle
 } from "lucide-react";
 
+// Interface aligned with ApiGarage, with some fields optional if not always present from API
 interface Garage {
   id: string;
   name: string;
   address: string;
   postcode: string;
-  phone: string;
-  email: string;
+  phone?: string;
   website?: string;
-  rating: number;
-  reviewCount: number;
-  distance: number;
-  priceRange: "£" | "££" | "£££";
-  specializations: string[];
-  services: string[];
-  openingHours: {
-    [key: string]: string;
+  rating?: number;
+  reviewCount?: number;
+  distance?: number;
+  priceRange?: "£" | "££" | "£££"; // from ApiGarage
+  specializations?: string[];
+  services: string[]; // Mapped from servicesOffered
+  openingHours?: { // from ApiGarage
+    [key: string]: string | undefined; // Ensure compatibility with potential undefined day from API
+    monday?: string;
+    tuesday?: string;
+    wednesday?: string;
+    thursday?: string;
+    friday?: string;
+    saturday?: string;
+    sunday?: string;
   };
-  features: string[];
-  description: string;
-  established: number;
-  certified: string[];
-  image: string;
+  image?: string; // Mapped from imageUrl
+  certified?: string[]; // Mapped from certifications
+  mobileFitting?: boolean; // from ApiGarage
+  emergencyService?: boolean; // from ApiGarage
+  location?: { // from ApiGarage
+    latitude: number;
+    longitude: number;
+  };
+
+  // Fields from old Garage interface that might not be in ApiGarage - keep optional
+  email?: string;
+  features?: string[];
+  description?: string;
+  established?: number;
 }
 
 interface SearchFilters {
   postcode: string;
-  radius: number;
+  radius: number; // This might not be directly used by the current API, but good to keep
   serviceType: string;
-  minRating: number;
-  priceRange: string[];
-  certifications: string[];
-  openNow: boolean;
+  minRating: number; // This will be a client-side filter for now
+  priceRange: string[]; // Client-side filter
+  certifications: string[]; // Client-side filter
+  openNow: boolean; // Client-side filter
 }
 
-const mockGarages: Garage[] = [
-  {
-    id: "1",
-    name: "AutoCare Plus",
-    address: "123 High Street, Kingston upon Thames",
-    postcode: "KT1 1AA",
-    phone: "020 8546 1234",
-    email: "info@autocareplus.co.uk",
-    website: "www.autocareplus.co.uk",
-    rating: 4.8,
-    reviewCount: 127,
-    distance: 0.8,
-    priceRange: "££",
-    specializations: ["BMW", "Mercedes", "Audi", "Volkswagen"],
-    services: ["MOT Testing", "Service & Repair", "Diagnostics", "Tyres", "Brakes"],
-    openingHours: {
-      "Monday": "8:00 AM - 6:00 PM",
-      "Tuesday": "8:00 AM - 6:00 PM",
-      "Wednesday": "8:00 AM - 6:00 PM",
-      "Thursday": "8:00 AM - 6:00 PM",
-      "Friday": "8:00 AM - 6:00 PM",
-      "Saturday": "8:00 AM - 4:00 PM",
-      "Sunday": "Closed"
-    },
-    features: ["Free Courtesy Car", "24hr Collection", "Online Booking", "Warranty Work"],
-    description: "Family-run garage with 25+ years experience specializing in German vehicles. DVSA approved MOT testing station.",
-    established: 1998,
-    certified: ["DVSA Approved", "Bosch Car Service", "AA Approved"],
-    image: "https://images.unsplash.com/photo-1486754735734-325b5831c3ad?w=400&h=200&fit=crop"
-  },
-  {
-    id: "2",
-    name: "QuickFit Tyres & Service",
-    address: "45 London Road, Surbiton",
-    postcode: "KT6 7BX",
-    phone: "020 8390 5678",
-    email: "contact@quickfitservice.co.uk",
-    rating: 4.6,
-    reviewCount: 89,
-    distance: 1.2,
-    priceRange: "£",
-    specializations: ["Tyres", "Brakes", "Exhaust", "Batteries"],
-    services: ["Tyre Fitting", "Wheel Alignment", "Brake Repair", "Exhaust", "Battery"],
-    openingHours: {
-      "Monday": "7:30 AM - 6:30 PM",
-      "Tuesday": "7:30 AM - 6:30 PM",
-      "Wednesday": "7:30 AM - 6:30 PM",
-      "Thursday": "7:30 AM - 6:30 PM",
-      "Friday": "7:30 AM - 6:30 PM",
-      "Saturday": "8:00 AM - 5:00 PM",
-      "Sunday": "10:00 AM - 4:00 PM"
-    },
-    features: ["Price Match Guarantee", "Same Day Service", "Mobile Fitting", "Free Health Check"],
-    description: "Specialist tyre and fast-fit service center. Competitive prices with price match guarantee.",
-    established: 2005,
-    certified: ["TyreSafe", "FGAS Certified"],
-    image: "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400&h=200&fit=crop"
-  },
-  {
-    id: "3",
-    name: "Heritage Motors",
-    address: "78 Portsmouth Road, Thames Ditton",
-    postcode: "KT7 0SR",
-    phone: "020 8398 9012",
-    email: "service@heritagemotors.co.uk",
-    website: "www.heritagemotors.co.uk",
-    rating: 4.9,
-    reviewCount: 203,
-    distance: 2.1,
-    priceRange: "£££",
-    specializations: ["Land Rover", "Jaguar", "Range Rover", "Classic Cars"],
-    services: ["Full Service", "MOT Testing", "Diagnostics", "Restoration", "Performance"],
-    openingHours: {
-      "Monday": "8:00 AM - 5:30 PM",
-      "Tuesday": "8:00 AM - 5:30 PM",
-      "Wednesday": "8:00 AM - 5:30 PM",
-      "Thursday": "8:00 AM - 5:30 PM",
-      "Friday": "8:00 AM - 5:30 PM",
-      "Saturday": "9:00 AM - 1:00 PM",
-      "Sunday": "Closed"
-    },
-    features: ["Specialist Diagnostics", "Genuine Parts", "Collection Service", "Loan Cars"],
-    description: "Premium service center specializing in luxury British vehicles. Authorized service partner.",
-    established: 1987,
-    certified: ["Land Rover Approved", "Jaguar Authorized", "IMI Certified"],
-    image: "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?w=400&h=200&fit=crop"
-  },
-  {
-    id: "4",
-    name: "TechAuto Diagnostics",
-    address: "156 Kingston Road, New Malden",
-    postcode: "KT3 3RG",
-    phone: "020 8942 3456",
-    email: "info@techauodiag.co.uk",
-    rating: 4.7,
-    reviewCount: 156,
-    distance: 1.8,
-    priceRange: "££",
-    specializations: ["Diagnostics", "ECU Repair", "DPF Cleaning", "Air Con"],
-    services: ["Engine Diagnostics", "ECU Programming", "DPF Service", "Air Conditioning", "Electrical"],
-    openingHours: {
-      "Monday": "9:00 AM - 6:00 PM",
-      "Tuesday": "9:00 AM - 6:00 PM",
-      "Wednesday": "9:00 AM - 6:00 PM",
-      "Thursday": "9:00 AM - 6:00 PM",
-      "Friday": "9:00 AM - 6:00 PM",
-      "Saturday": "9:00 AM - 3:00 PM",
-      "Sunday": "Closed"
-    },
-    features: ["Latest Diagnostics", "Programming", "DPF Specialist", "Electrical Experts"],
-    description: "Specialist in modern vehicle diagnostics and electronic systems. Latest diagnostic equipment.",
-    established: 2010,
-    certified: ["Bosch Certified", "Launch Approved", "Delphi Trained"],
-    image: "https://images.unsplash.com/photo-1530046339160-ce3e530c7d2f?w=400&h=200&fit=crop"
-  },
-  {
-    id: "5",
-    name: "Green Lane Motors",
-    address: "234 Green Lane, Worcester Park",
-    postcode: "KT4 8QT",
-    phone: "020 8337 7890",
-    email: "workshop@greenlane.co.uk",
-    rating: 4.4,
-    reviewCount: 78,
-    distance: 3.2,
-    priceRange: "£",
-    specializations: ["Ford", "Vauxhall", "Nissan", "Toyota"],
-    services: ["General Repair", "MOT Testing", "Service", "Bodywork", "Insurance Work"],
-    openingHours: {
-      "Monday": "8:00 AM - 5:00 PM",
-      "Tuesday": "8:00 AM - 5:00 PM",
-      "Wednesday": "8:00 AM - 5:00 PM",
-      "Thursday": "8:00 AM - 5:00 PM",
-      "Friday": "8:00 AM - 5:00 PM",
-      "Saturday": "8:00 AM - 12:00 PM",
-      "Sunday": "Closed"
-    },
-    features: ["Insurance Approved", "Free Estimates", "Local Collection", "Family Run"],
-    description: "Local family-run garage serving the community for over 30 years. Honest, reliable service.",
-    established: 1992,
-    certified: ["DVSA Approved", "Insurance Approved"],
-    image: "https://images.unsplash.com/photo-1632823471565-1ecdf4543986?w=400&h=200&fit=crop"
-  }
-];
+// ApiGarage structure (for reference during transformation, assuming it's defined elsewhere)
+// interface ApiGarage {
+//   id: string;
+//   name: string;
+//   address: string;
+//   postcode: string;
+//   phone?: string;
+//   website?: string;
+//   rating?: number;
+//   reviewCount?: number;
+//   distance?: number;
+//   servicesOffered: string[];
+//   specializations?: string[];
+//   openingHours?: { /* ... */ };
+//   location: { latitude: number; longitude: number; };
+//   imageUrl?: string;
+//   priceRange?: '£' | '££' | '£££';
+//   certifications?: string[];
+//   mobileFitting?: boolean;
+//   emergencyService?: boolean;
+// }
+
 
 const serviceTypes = [
   "All Services",
@@ -260,45 +154,8 @@ export default function GarageFinder() {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // Filter garages based on criteria
-    let filteredGarages = [...mockGarages];
-
-    // Filter by service type
-    if (filters.serviceType !== "All Services") {
-      filteredGarages = filteredGarages.filter(garage =>
-        garage.services.includes(filters.serviceType)
-      );
-    }
-
-    // Filter by rating
-    if (filters.minRating > 0) {
-      filteredGarages = filteredGarages.filter(garage =>
-        garage.rating >= filters.minRating
-      );
-    }
-
-    // Filter by price range
-    if (filters.priceRange.length > 0) {
-      filteredGarages = filteredGarages.filter(garage =>
-        filters.priceRange.includes(garage.priceRange)
-      );
-    }
-
-    // Filter by certifications
-    if (filters.certifications.length > 0) {
-      filteredGarages = filteredGarages.filter(garage =>
-        filters.certifications.some(cert => garage.certified.includes(cert))
-      );
-    }
-
-    // Sort by distance
-    filteredGarages.sort((a, b) => a.distance - b.distance);
-
-    setResults(filteredGarages);
-    setLoading(false);
-  };
-
-  const getPriceRangeText = (range: string) => {
+  const getPriceRangeText = (range?: "£" | "££" | "£££") => {
+    if (!range) return "";
     switch (range) {
       case "£": return "Budget-friendly";
       case "££": return "Mid-range";
@@ -307,16 +164,33 @@ export default function GarageFinder() {
     }
   };
 
-  const isOpenNow = (hours: { [key: string]: string }) => {
+  const isOpenNow = (hours: { [key: string]: string | undefined }) => {
     const now = new Date();
     const day = now.toLocaleDateString('en-US', { weekday: 'long' });
-    const todayHours = hours[day];
+    const todayHours = hours[day.toLowerCase() as keyof typeof hours] || hours[day]; // try lowercase first
 
-    if (!todayHours || todayHours === "Closed") return false;
+    if (!todayHours || todayHours === "Closed" || todayHours.toLowerCase().includes("closed")) return false;
+    
+    // Basic check, assumes format "8:00 AM - 6:00 PM" or "24 Hours"
+    // A more robust solution would parse times properly.
+    if (todayHours.toLowerCase().includes("24 hours")) return true;
 
-    // Simple check - in real implementation would parse actual times
-    return true;
+    const parts = todayHours.split('-');
+    if (parts.length !== 2) return false; // Invalid format
+
+    const openTimeStr = parts[0].trim();
+    const closeTimeStr = parts[1].trim();
+
+    // Super simplified check: if current hour is between typical open/close hours.
+    // This is NOT robust. A proper library for date/time manipulation is needed for accuracy.
+    const currentHour = now.getHours();
+    if (openTimeStr.toLowerCase().includes("am") && closeTimeStr.toLowerCase().includes("pm")) {
+      if (currentHour >= 8 && currentHour < 18) return true; // Basic assumption
+    }
+    // This is a placeholder and needs a real time parsing logic for production
+    return false; 
   };
+
 
   return (
     <div className="space-y-8">

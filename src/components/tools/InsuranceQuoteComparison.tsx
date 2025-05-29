@@ -58,156 +58,52 @@ interface CoverageDetails {
   coverageExtras: string[];
 }
 
+// Updated interface
 interface InsuranceQuote {
   id: string;
   provider: string;
-  logo: string;
-  price: number;
-  monthlyPrice: number;
+  logo: string; // Map from ApiInsuranceQuote.logoUrl or use a placeholder
+  price: number; // Map from ApiInsuranceQuote.priceAnnual
+  monthlyPrice: number; // Map from ApiInsuranceQuote.priceMonthly
   coverType: string;
-  rating: number;
-  reviewCount: number;
-  excess: number;
-  phoneNumber: string;
-  website: string;
+  rating: number; // Default to 0 if not present
+  reviewCount: number; // Default to 0 if not present
+  excess: number; // Map from ApiInsuranceQuote.excessAmount
+  phoneNumber: string; // Default to 'N/A' if not present
+  website: string; // Default to '#' if not present
   features: {
     windscreenCover: boolean;
-    breakdown: boolean;
-    replacementCar: boolean;
-    motorLegalProtection: boolean;
+    breakdown: boolean; // Map from ApiInsuranceQuote.features.breakdownCover
+    replacementCar: boolean; // Map from ApiInsuranceQuote.features.courtesyCar
+    motorLegalProtection: boolean; // Map from ApiInsuranceQuote.features.legalProtection
   };
-  discounts: string[];
-  cashback: number;
+  discounts: string[]; // Default to empty array if not present
+  cashback: number; // Default to 0 if not present
 }
 
-const mockQuotes: InsuranceQuote[] = [
-  {
-    id: "1",
-    provider: "Direct Line",
-    logo: "🏢",
-    price: 456,
-    monthlyPrice: 42,
-    coverType: "Comprehensive",
-    rating: 4.2,
-    reviewCount: 18743,
-    excess: 150,
-    phoneNumber: "0345 246 8704",
-    website: "directline.com",
-    features: {
-      windscreenCover: true,
-      breakdown: true,
-      replacementCar: true,
-      motorLegalProtection: true
-    },
-    discounts: ["Multi-car discount", "Online discount"],
-    cashback: 0
-  },
-  {
-    id: "2",
-    provider: "Admiral",
-    logo: "⚓",
-    price: 389,
-    monthlyPrice: 36,
-    coverType: "Comprehensive",
-    rating: 4.5,
-    reviewCount: 24561,
-    excess: 200,
-    phoneNumber: "0333 220 2000",
-    website: "admiral.com",
-    features: {
-      windscreenCover: true,
-      breakdown: false,
-      replacementCar: true,
-      motorLegalProtection: true
-    },
-    discounts: ["MultiCover", "Named driver"],
-    cashback: 25
-  },
-  {
-    id: "3",
-    provider: "Aviva",
-    logo: "🅰️",
-    price: 423,
-    monthlyPrice: 39,
-    coverType: "Comprehensive",
-    rating: 4.0,
-    reviewCount: 31247,
-    excess: 175,
-    phoneNumber: "0800 158 4511",
-    website: "aviva.co.uk",
-    features: {
-      windscreenCover: true,
-      breakdown: true,
-      replacementCar: true,
-      motorLegalProtection: false
-    },
-    discounts: ["Multi-policy", "Loyalty discount"],
-    cashback: 0
-  },
-  {
-    id: "4",
-    provider: "LV=",
-    logo: "💚",
-    price: 368,
-    monthlyPrice: 34,
-    coverType: "Comprehensive",
-    rating: 4.4,
-    reviewCount: 16832,
-    excess: 150,
-    phoneNumber: "0800 202 8000",
-    website: "lv.com",
-    features: {
-      windscreenCover: true,
-      breakdown: false,
-      replacementCar: true,
-      motorLegalProtection: true
-    },
-    discounts: ["SmartDrive app", "Multi-vehicle"],
-    cashback: 50
-  },
-  {
-    id: "5",
-    provider: "Churchill",
-    logo: "🐕",
-    price: 445,
-    monthlyPrice: 41,
-    coverType: "Comprehensive",
-    rating: 4.1,
-    reviewCount: 22156,
-    excess: 200,
-    phoneNumber: "0345 878 6261",
-    website: "churchill.com",
-    features: {
-      windscreenCover: true,
-      breakdown: true,
-      replacementCar: false,
-      motorLegalProtection: true
-    },
-    discounts: ["Online discount", "Multi-car"],
-    cashback: 0
-  },
-  {
-    id: "6",
-    provider: "AA Insurance",
-    logo: "🛣️",
-    price: 512,
-    monthlyPrice: 47,
-    coverType: "Comprehensive",
-    rating: 4.3,
-    reviewCount: 15647,
-    excess: 175,
-    phoneNumber: "0800 107 0680",
-    website: "theaa.com",
-    features: {
-      windscreenCover: true,
-      breakdown: true,
-      replacementCar: true,
-      motorLegalProtection: true
-    },
-    discounts: ["AA membership", "Multi-vehicle"],
-    cashback: 0
-  }
-];
+// For reference, not used directly in component:
+// interface ApiInsuranceQuote {
+//   id: string;
+//   provider: string;
+//   logoUrl?: string;
+//   priceAnnual: number;
+//   priceMonthly: number;
+//   coverType: string;
+//   rating?: number;
+//   reviewCount?: number;
+//   excessAmount: number;
+//   contactPhoneNumber?: string;
+//   websiteUrl?: string;
+//   features: {
+//     windscreenCover?: boolean;
+//     breakdownCover?: boolean;
+//     courtesyCar?: boolean;
+//     legalProtection?: boolean;
+//   };
+//   discountsAvailable?: string[];
+//   cashbackAmount?: number;
+// }
+
 
 export default function InsuranceQuoteComparison() {
   const [currentStep, setCurrentStep] = useState(0);
@@ -216,6 +112,7 @@ export default function InsuranceQuoteComparison() {
   const [coverageDetails, setCoverageDetails] = useState<Partial<CoverageDetails>>({});
   const [quotes, setQuotes] = useState<InsuranceQuote[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [showResults, setShowResults] = useState(false);
   const [sortBy, setSortBy] = useState<string>('price');
   const [filterByRating, setFilterByRating] = useState<number>(0);
@@ -246,55 +143,67 @@ export default function InsuranceQuoteComparison() {
 
   const generateQuotes = async () => {
     setLoading(true);
+    setError(null);
+    setShowResults(false); // Hide previous results/errors
+
+    const payload = {
+      driverDetails,
+      vehicleDetails,
+      coverageDetails,
+    };
 
     try {
-      // Simulate API calls to multiple insurance providers
-      await new Promise(resolve => setTimeout(resolve, 3000));
-
-      // Apply risk factors to base quotes
-      let adjustedQuotes = [...mockQuotes];
-
-      // Age factor
-      const birthDate = driverDetails.dateOfBirth || '1990-01-01';
-      const age = new Date().getFullYear() - new Date(birthDate).getFullYear();
-      const ageFactor = age < 25 ? 1.4 : age > 50 ? 0.9 : 1.0;
-
-      // Experience factor
-      const experienceFactor = (driverDetails.licenseHeldYears || 5) < 2 ? 1.3 :
-                              (driverDetails.licenseHeldYears || 5) > 10 ? 0.85 : 1.0;
-
-      // Claims factor
-      const claimsFactor = 1 + ((driverDetails.claims || 0) * 0.25);
-
-      // Vehicle value factor
-      const vehicleValueFactor = (vehicleDetails.value || 15000) > 30000 ? 1.2 :
-                                 (vehicleDetails.value || 15000) < 10000 ? 0.9 : 1.0;
-
-      // Postcode factor (simulate regional pricing)
-      const postcodeFactor = driverDetails.postcode?.startsWith('M') ? 1.15 :  // Manchester
-                            driverDetails.postcode?.startsWith('B') ? 1.12 :   // Birmingham
-                            driverDetails.postcode?.startsWith('L') ? 1.18 :   // Liverpool
-                            driverDetails.postcode?.startsWith('SW') ? 1.25 :  // London SW
-                            driverDetails.postcode?.startsWith('E') ? 1.22 :   // London E
-                            0.95; // Rural areas
-
-      adjustedQuotes = adjustedQuotes.map(quote => {
-        const adjustedPrice = Math.round(quote.price * ageFactor * experienceFactor * claimsFactor * vehicleValueFactor * postcodeFactor);
-        return {
-          ...quote,
-          price: adjustedPrice,
-          monthlyPrice: Math.round(adjustedPrice / 12)
-        };
+      const response = await fetch('/api/insurance/quotes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
       });
 
-      // Sort by price initially
-      adjustedQuotes.sort((a, b) => a.price - b.price);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.details || `API error: ${response.statusText}`);
+      }
 
-      setQuotes(adjustedQuotes);
-      setLoading(false);
+      const apiQuotes: any[] = await response.json(); // Using 'any' for ApiInsuranceQuote as it's not defined in this file
+
+      const transformedQuotes: InsuranceQuote[] = apiQuotes.map(apiQuote => ({
+        id: apiQuote.id,
+        provider: apiQuote.provider,
+        logo: apiQuote.logoUrl || '🏢', // Placeholder if logoUrl is not present
+        price: apiQuote.priceAnnual,
+        monthlyPrice: apiQuote.priceMonthly,
+        coverType: apiQuote.coverType,
+        rating: apiQuote.rating || 0,
+        reviewCount: apiQuote.reviewCount || 0,
+        excess: apiQuote.excessAmount,
+        phoneNumber: apiQuote.contactPhoneNumber || 'N/A',
+        website: apiQuote.websiteUrl || '#', // Use # as a fallback for links
+        features: {
+          windscreenCover: apiQuote.features?.windscreenCover || false,
+          breakdown: apiQuote.features?.breakdownCover || false,
+          replacementCar: apiQuote.features?.courtesyCar || false,
+          motorLegalProtection: apiQuote.features?.legalProtection || false,
+        },
+        discounts: apiQuote.discountsAvailable || [],
+        cashback: apiQuote.cashbackAmount || 0,
+      }));
+      
+      // Sort by price initially (can be adjusted by user later)
+      transformedQuotes.sort((a, b) => a.price - b.price);
+
+      setQuotes(transformedQuotes);
       setShowResults(true);
-    } catch (error) {
-      console.error('Error generating quotes:', error);
+
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(`Failed to fetch quotes: ${err.message}. Please try again.`);
+      } else {
+        setError('An unknown error occurred while fetching quotes.');
+      }
+      console.error('Error generating quotes:', err);
+    } finally {
       setLoading(false);
     }
   };

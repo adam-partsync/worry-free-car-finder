@@ -38,20 +38,23 @@ interface TowingCalculation {
   recommendations: string[];
 }
 
-interface VehicleRecommendation {
+interface VehicleRecommendation { // This is the component's interface
   make: string;
   model: string;
-  year: string;
-  towingCapacity: number;
-  price: string;
-  fuelType: string;
-  bodyType: string;
-  features: string[];
-  pros: string[];
-  cons: string[];
-  image: string;
-  suitability: 'excellent' | 'good' | 'fair';
+  year: string; // From ApiTowingVehicle.year
+  towingCapacity: number; // From ApiTowingVehicle.towingCapacity
+  price: string; // From ApiTowingVehicle.priceRange
+  fuelType: string; // From ApiTowingVehicle.fuelType, ensure default if undefined
+  bodyType: string; // From ApiTowingVehicle.bodyType, ensure default if undefined
+  features: string[]; // This was in the old interface, ApiTowingVehicle doesn't have a direct 'features' array. Map from other fields or set to empty array. Consider if `engineDetails` or other info from `ApiTowingVehicle` should be part of features.
+  pros: string[]; // From ApiTowingVehicle.pros, ensure default like []
+  cons: string[]; // From ApiTowingVehicle.cons, ensure default like []
+  image: string; // From ApiTowingVehicle.imageUrl, ensure default placeholder if undefined
+  suitability: 'excellent' | 'good' | 'fair' | string; // From ApiTowingVehicle.suitability, ensure default
+  // Add engineDetails if you want to display it directly
+  engineDetails?: string; // From ApiTowingVehicle.engineDetails
 }
+
 
 interface TowingGuide {
   id: string;
@@ -64,22 +67,38 @@ interface TowingGuide {
   requirements: string[];
 }
 
+// For reference, not used directly in component:
+// interface ApiTowingVehicle {
+//   id: string;
+//   make: string;
+//   model: string;
+//   year: string; // Or number
+//   towingCapacity: number;
+//   priceRange: string; // e.g., "£35,000 - £45,000"
+//   fuelType?: string;
+//   bodyType?: string;
+//   engineDetails?: string;
+//   imageUrl?: string;
+//   pros?: string[];
+//   cons?: string[];
+//   suitability?: 'excellent' | 'good' | 'fair' | string; // For towing
+// }
+
 export default function TowingGuide() {
   const [activeTab, setActiveTab] = useState("calculator");
   const [trailerWeight, setTrailerWeight] = useState("");
   const [cargoWeight, setCargoWeight] = useState("");
   const [towingCalculation, setTowingCalculation] = useState<TowingCalculation | null>(null);
-  const [towingNeed, setTowingNeed] = useState("");
-  const [budget, setBudget] = useState("");
-  const [fuelPreference, setFuelPreference] = useState("");
+  const [towingNeed, setTowingNeed] = useState(""); // For the select dropdown
+  const [budget, setBudget] = useState(""); // For the select dropdown
+  const [fuelPreference, setFuelPreference] = useState(""); // For the select dropdown
+  
   const [recommendations, setRecommendations] = useState<VehicleRecommendation[]>([]);
+  const [loadingRecommendations, setLoadingRecommendations] = useState<boolean>(false);
+  const [recommendationError, setRecommendationError] = useState<string | null>(null);
 
-  // Initialize with all vehicles when component loads
-  useEffect(() => {
-    setRecommendations(allRecommendations);
-  }, []);
 
-  // Mock towing guides data
+  // Mock towing guides data - remains as static content
   const towingGuides: TowingGuide[] = [
     {
       id: "1",
@@ -155,94 +174,6 @@ export default function TowingGuide() {
     }
   ];
 
-  // Mock vehicle recommendations
-  const allRecommendations: VehicleRecommendation[] = [
-    {
-      make: "Ford",
-      model: "Ranger Wildtrak",
-      year: "2023",
-      towingCapacity: 3500,
-      price: "£35,000 - £45,000",
-      fuelType: "Diesel",
-      bodyType: "Pick-up Truck",
-      features: ["4WD", "Automatic", "Sat Nav", "Leather Seats"],
-      pros: ["Excellent towing capacity", "Great off-road capability", "Comfortable interior"],
-      cons: ["Higher fuel consumption", "Large size for city driving"],
-      image: "https://images.unsplash.com/photo-1605767832041-bcfde34871d2?w=400&h=250&fit=crop&auto=format",
-      suitability: "excellent"
-    },
-    {
-      make: "Land Rover",
-      model: "Discovery",
-      year: "2023",
-      towingCapacity: 3500,
-      price: "£55,000 - £70,000",
-      fuelType: "Diesel",
-      bodyType: "SUV",
-      features: ["Air Suspension", "Terrain Response", "7 Seats", "Premium Audio"],
-      pros: ["Luxury interior", "Advanced towing features", "Excellent capability"],
-      cons: ["High purchase price", "Expensive to service"],
-      image: "https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=400&h=250&fit=crop&auto=format",
-      suitability: "excellent"
-    },
-    {
-      make: "BMW",
-      model: "X5 xDrive40d",
-      year: "2023",
-      towingCapacity: 2700,
-      price: "£60,000 - £75,000",
-      fuelType: "Diesel",
-      bodyType: "SUV",
-      features: ["xDrive AWD", "Harman Kardon Audio", "Panoramic Roof", "Digital Cockpit"],
-      pros: ["Premium build quality", "Great driving dynamics", "Advanced technology"],
-      cons: ["Lower towing capacity", "Premium fuel costs"],
-      image: "https://images.unsplash.com/photo-1555215695-3004980ad54e?w=400&h=250&fit=crop&auto=format",
-      suitability: "good"
-    },
-    {
-      make: "Volkswagen",
-      model: "Touareg",
-      year: "2023",
-      towingCapacity: 3500,
-      price: "£50,000 - £65,000",
-      fuelType: "Diesel",
-      bodyType: "SUV",
-      features: ["Air Suspension", "Digital Cockpit", "Matrix LED", "Premium Sound"],
-      pros: ["Excellent towing capacity", "Refined drive", "Advanced tech"],
-      cons: ["High depreciation", "Complex electronics"],
-      image: "https://images.unsplash.com/photo-1617531653332-bd46c24f2068?w=400&h=250&fit=crop&auto=format",
-      suitability: "excellent"
-    },
-    {
-      make: "Nissan",
-      model: "Navara Tekna",
-      year: "2023",
-      towingCapacity: 3200,
-      price: "£28,000 - £38,000",
-      fuelType: "Diesel",
-      bodyType: "Pick-up Truck",
-      features: ["4WD", "Leather Interior", "Sat Nav", "Rear Camera"],
-      pros: ["Good value for money", "Practical load space", "Reliable"],
-      cons: ["Firm ride quality", "Interior not premium"],
-      image: "https://images.unsplash.com/photo-1563720223185-11003d516935?w=400&h=250&fit=crop&auto=format",
-      suitability: "good"
-    },
-    {
-      make: "Mitsubishi",
-      model: "Outlander PHEV",
-      year: "2023",
-      towingCapacity: 1500,
-      price: "£40,000 - £50,000",
-      fuelType: "Hybrid",
-      bodyType: "SUV",
-      features: ["4WD", "Electric Range", "7 Seats", "Safety Pack"],
-      pros: ["Low running costs", "Electric driving capability", "7 seats"],
-      cons: ["Limited towing capacity", "Firm suspension"],
-      image: "https://images.unsplash.com/photo-1609521263047-f8f205293f24?w=400&h=250&fit=crop&auto=format",
-      suitability: "fair"
-    }
-  ];
-
   const calculateTowing = () => {
     const trailer = Number(trailerWeight);
     const cargo = Number(cargoWeight);
@@ -283,54 +214,6 @@ export default function TowingGuide() {
   };
 
   const getVehicleRecommendations = () => {
-    let filtered = allRecommendations;
-
-    // Filter by towing capacity if calculated
-    if (towingCalculation && towingCalculation.recommendedCapacity > 0) {
-      filtered = filtered.filter(vehicle => vehicle.towingCapacity >= towingCalculation.recommendedCapacity);
-    }
-
-    // Filter by budget
-    if (budget) {
-      const budgetRanges: Record<string, [number, number]> = {
-        "under-30k": [0, 30000],
-        "30k-50k": [30000, 50000],
-        "50k-70k": [50000, 70000],
-        "over-70k": [70000, 999999]
-      };
-
-      const [minPrice, maxPrice] = budgetRanges[budget] || [0, 999999];
-      filtered = filtered.filter(vehicle => {
-        // Extract price range from format "£28,000 - £38,000"
-        const priceStr = vehicle.price.replace(/[£,\s]/g, '');
-        const prices = priceStr.split('-');
-        const minVehiclePrice = Number(prices[0]) || 0;
-        const maxVehiclePrice = Number(prices[1]) || minVehiclePrice;
-
-        // Check if budget range overlaps with vehicle price range
-        return !(maxPrice < minVehiclePrice || minPrice > maxVehiclePrice);
-      });
-    }
-
-    // Filter by fuel preference
-    if (fuelPreference) {
-      filtered = filtered.filter(vehicle => vehicle.fuelType.toLowerCase() === fuelPreference.toLowerCase());
-    }
-
-    // Sort by suitability and towing capacity
-    filtered.sort((a, b) => {
-      const suitabilityOrder = { excellent: 3, good: 2, fair: 1 };
-      const aSuitability = suitabilityOrder[a.suitability];
-      const bSuitability = suitabilityOrder[b.suitability];
-
-      if (aSuitability !== bSuitability) {
-        return bSuitability - aSuitability;
-      }
-      return b.towingCapacity - a.towingCapacity;
-    });
-
-    setRecommendations(filtered);
-  };
 
   const getSuitabilityBadge = (suitability: string) => {
     switch (suitability) {
